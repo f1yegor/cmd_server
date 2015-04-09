@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"os/exec"
 	"net/http"
 	"encoding/json"
@@ -14,15 +15,31 @@ func main() {
 }
 
 func CommandHandler(w http.ResponseWriter, req *http.Request) {
-	// command := []string{req.FormValue("cmd")}
-	// fmt.Printf("Request %q \n", command)
- 	command := []string{"BCP", "select top 555 * from issue_history", 
-	"queryout", "D:\\sync_dumps\\temp_bcp.csv", "-c", "-t,", "-Slocalhost", "-U", "sa", "-P", "adm1n", "-d", "lat_fs", "-a", "65535"}
+	relPath := req.FormValue("path")
+	fmt.Printf("Path %q \n", relPath)
+	jsonStr := req.FormValue("cmd")
+	fmt.Printf("Json %q \n", jsonStr)
 
-    go Execute(w, command...)
+	// command = `["BCP", "select top 555 * from issue_history", 
+		// "queryout", "D:\\sync_dumps\\temp_bcp.csv", "-c", "-t,", "-Slocalhost", "-U", "sa", "-P", "adm1n", "-d", 
+		// "lat_fs", "-a", "65535"]`
+
+	array := make([]string, 0)
+	err := json.Unmarshal([]byte(jsonStr), &array)
+	if err != nil {
+		fmt.Printf("Fail %q \n", err)	
+		return
+	}
+	fmt.Printf("Request %q \n", array)
+ 	
+    go Execute(w, relPath, array...)
 }
 
-func Execute(w http.ResponseWriter, command ...string) {
+func Execute(w http.ResponseWriter, relPath string, command ...string) {
+	
+	EnsureDirectory(relPath)
+	//os.Chdir(relPath); defer os.Chdir(".")
+
 	prog, args := command[0], command[1:]
 	cmd := exec.Command(prog, args...)
 	var out bytes.Buffer
@@ -37,4 +54,12 @@ func Execute(w http.ResponseWriter, command ...string) {
 		fmt.Printf("Result %s \n", out)
 	}
 }
+
+func EnsureDirectory(relPath string) {
+	err := os.MkdirAll(relPath, 0666)
+	if err != nil {
+		fmt.Printf("Fail dir %q \n", err)	
+	}
+}
+
 
