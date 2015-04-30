@@ -49,7 +49,7 @@ func Execute(w http.ResponseWriter, relPath string, command ...string) {
 	err := cmd.Run()
 
 	if err != nil {
-		fmt.Fprintf(w, "fail\n")
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		fmt.Printf("Fail %q, out %s \n", err, out)
 	} else {
 		fmt.Fprintf(w, "ok\n")
