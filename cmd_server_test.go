@@ -13,7 +13,7 @@ func TestParseCommand(t *testing.T) {
 		t.Fail()
 	}
 
-	jsonStr = `["sqlcmd", "-Slocalhost", "-U", "sa", "-P", "adm1n", "-d", "lat_fs_test", "-h", "-1", "-w", "65535", "-s^", "-Q", "SELECT [name], [server_timestamp], [id] FROM note_category", "-o", "test_sqlcmd_bcp.csv"]`
+	jsonStr = `["sqlcmd", "-Slocalhost", "-U", "guest", "-P", "guest", "-d", "test_db", "-h", "-1", "-w", "65535", "-s^", "-Q", "SELECT [name], [server_timestamp], [id] FROM note_category", "-o", "test_sqlcmd_bcp.csv"]`
 	_, err = parseCommand(jsonStr)
 	if err != nil {
 		t.Fail()
@@ -22,7 +22,7 @@ func TestParseCommand(t *testing.T) {
 
 func TestExecute(t *testing.T) {
 	relPath := ""
-	array, _ := parseCommand(`["sqlcmd", "-Slocalhost", "-U", "sa", "-P", "adm1n", "-d", "lat_fs_test", "-h", "-1", "-w", "65535", "-s^", "-Q", "SELECT [name], [server_timestamp], [id] FROM note_category", "-o", "test_sqlcmd_bcp.csv"]`)
+	array, _ := parseCommand(`["sqlcmd", "-Slocalhost", "-U", "guest", "-P", "guest", "-d", "test_db", "-h", "-1", "-w", "65535", "-s^", "-Q", "SELECT [name], [server_timestamp], [id] FROM note_category", "-o", "test_sqlcmd_bcp.csv"]`)
 	w := httptest.NewRecorder()
 
 	Execute(w, relPath, array...)

@@ -25,15 +25,7 @@ func CommandHandler(w http.ResponseWriter, req *http.Request) {
 	log.Printf("Path %q \n", relPath)
 	jsonStr := req.FormValue("cmd")
 
-	// bcp variant
-	// jsonStr = `["BCP", "select top 555 * from issue_history",
-	// "queryout", "temp_bcp.csv", "-c", "-t,", "-Slocalhost", "-U", "sa", "-P", "adm1n", "-d",
-	// "lat_fs", "-a", "65535"]`
-	// sqlcmd variant
-	// jsonStr = `["sqlcmd", "-Slocalhost", "-U", "sa", "-P", "adm1n", "-d", "lat_fs_test", "-h", "-1", "-w", "65535", "-s#", "-Q", "SELECT * FROM note_category", "-o", "test_sqlcmd_bcp.csv"]`
-
 	array, err := parseCommand(jsonStr)
-
 	if err != nil {
 		failure(w, err)
 		return
