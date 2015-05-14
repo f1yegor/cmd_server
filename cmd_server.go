@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -13,28 +14,30 @@ import (
 func main() {
 	http.HandleFunc("/generate", CommandHandler)
 	config := readConfig()
-	fmt.Printf("Listen commands on %s \n", config.Port)
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	log.Printf("Listen commands on %s \n", config.Port)
 
 	http.ListenAndServe(":"+config.Port, nil)
 }
 
 func CommandHandler(w http.ResponseWriter, req *http.Request) {
 	relPath := req.FormValue("path")
-	fmt.Printf("Path %q \n", relPath)
+	log.Printf("Path %q \n", relPath)
 	jsonStr := req.FormValue("cmd")
-	fmt.Printf("Json %q \n", jsonStr)
 
-	// command = `["BCP", "select top 555 * from issue_history",
+	// bcp variant
+	// jsonStr = `["BCP", "select top 555 * from issue_history",
 	// "queryout", "temp_bcp.csv", "-c", "-t,", "-Slocalhost", "-U", "sa", "-P", "adm1n", "-d",
 	// "lat_fs", "-a", "65535"]`
+	// sqlcmd variant
+	// jsonStr = `["sqlcmd", "-Slocalhost", "-U", "sa", "-P", "adm1n", "-d", "lat_fs_test", "-h", "-1", "-w", "65535", "-s#", "-Q", "SELECT * FROM note_category", "-o", "test_sqlcmd_bcp.csv"]`
 
-	array := make([]string, 0)
-	err := json.Unmarshal([]byte(jsonStr), &array)
+	array, err := parseCommand(jsonStr)
+
 	if err != nil {
-		fmt.Printf("Fail %q \n", err)
+		failure(w, err)
 		return
 	}
-	//fmt.Printf("Request %q \n", array)
 
 	Execute(w, relPath, array...)
 }
@@ -49,11 +52,12 @@ func Execute(w http.ResponseWriter, relPath string, command ...string) {
 	err := cmd.Run()
 
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		fmt.Printf("Fail %q, out %s \n", err, out)
+		log.Printf("Fail execute %q, out %s \n", err, out)
+		failure(w, err)
+
 	} else {
 		fmt.Fprintf(w, "ok\n")
-		fmt.Printf("Result %s \n", out)
+		log.Printf("Result %s \n", out)
 	}
 }
 
@@ -64,8 +68,26 @@ func EnsureDirectory(relPath string) {
 
 	err := os.MkdirAll(relPath, 0666)
 	if err != nil {
-		fmt.Printf("Fail dir %q \n", err)
+		log.Printf("Fail dir %q \n", err)
 	}
+}
+
+func parseCommand(jsonStr string) ([]string, error) {
+	log.Printf("Json %q \n", jsonStr)
+
+	array := make([]string, 0)
+	err := json.Unmarshal([]byte(jsonStr), &array)
+
+	if err != nil {
+		log.Printf("Fail %q with %s \n", err, jsonStr)
+	}
+
+	return array, err
+}
+
+func failure(w http.ResponseWriter, err error) {
+	http.Error(w, err.Error(), http.StatusInternalServerError)
+	fmt.Fprintf(w, "fail\n")
 }
 
 type Config struct {
@@ -75,7 +97,7 @@ type Config struct {
 func readConfig() Config {
 	file, err := os.Open("settings.txt")
 	if err != nil {
-		fmt.Printf("Use default port 4000\n")
+		log.Printf("Use default port 4000\n")
 		return Config{Port: "4000"}
 	}
 	defer file.Close()
