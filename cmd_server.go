@@ -13,6 +13,8 @@ import (
 
 func main() {
 	http.HandleFunc("/generate", CommandHandler)
+	http.Handle("/", http.FileServer(http.Dir(".")))
+
 	config := readConfig()
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	log.Printf("Listen commands on %s \n", config.Port)
