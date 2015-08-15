@@ -46,16 +46,21 @@ func Execute(w http.ResponseWriter, relPath string, command ...string) {
 	cmd := exec.Command(prog, args...)
 	var out bytes.Buffer
 	cmd.Stdout = &out
+	cmd.Stderr = &out
 	err := cmd.Run()
 
 	if err != nil {
-		log.Printf("Fail execute %q, out %s \n", err, out)
+		log.Printf("Fail execute [%q], out [%s] \n", err, printOut(&out))
 		failure(w, err)
 
 	} else {
 		fmt.Fprintf(w, "ok\n")
-		log.Printf("Result %s \n", out)
+		log.Printf("Result [%s] \n", printOut(&out))
 	}
+}
+
+func printOut(buf *bytes.Buffer) string {
+	return buf.String()
 }
 
 func EnsureDirectory(relPath string) {
