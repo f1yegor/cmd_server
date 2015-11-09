@@ -3,20 +3,17 @@ package main
 import (
 	"bufio"
 	"bytes"
-	"compress/gzip"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"os"
 	"os/exec"
-	"strings"
 )
 
 func main() {
-	http.HandleFunc("/generate", CommandHandler)
-	http.Handle("/", Gzip(http.FileServer(http.Dir("."))))
+	http.HandleFunc("/generate", commandHandler)
+	http.Handle("/", gzipHandler(http.FileServer(http.Dir("."))))
 
 	config := readConfig()
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
@@ -25,7 +22,7 @@ func main() {
 	http.ListenAndServe(":"+config.Port, nil)
 }
 
-func CommandHandler(w http.ResponseWriter, req *http.Request) {
+func commandHandler(w http.ResponseWriter, req *http.Request) {
 	relPath := req.FormValue("path")
 	log.Printf("Path %q \n", relPath)
 	jsonStr := req.FormValue("cmd")
@@ -36,11 +33,11 @@ func CommandHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	Execute(w, relPath, array...)
+	execute(w, relPath, array...)
 }
 
-func Execute(w http.ResponseWriter, relPath string, command ...string) {
-	EnsureDirectory(relPath)
+func execute(w http.ResponseWriter, relPath string, command ...string) {
+	ensureDirectory(relPath)
 
 	prog, args := command[0], command[1:]
 	cmd := exec.Command(prog, args...)
@@ -63,7 +60,7 @@ func printOut(buf *bytes.Buffer) string {
 	return buf.String()
 }
 
-func EnsureDirectory(relPath string) {
+func ensureDirectory(relPath string) {
 	if relPath == "" || relPath == "./" {
 		return
 	}
@@ -92,43 +89,21 @@ func failure(w http.ResponseWriter, err error) {
 	fmt.Fprintf(w, "fail\n")
 }
 
-type Config struct {
-	Port string // port listen to
+type config struct {
+	Port string
 }
 
-func readConfig() Config {
+func readConfig() config {
 	file, err := os.Open("settings.txt")
 	if err != nil {
 		log.Printf("Use default port 4000\n")
-		return Config{Port: "4000"}
+		return config{Port: "4000"}
 	}
 	defer file.Close()
-	config := Config{}
+	config := config{}
 	configScanner := bufio.NewScanner(file)
 	if configScanner.Scan() {
 		config.Port = configScanner.Text()
 	}
 	return config
-}
-
-type gzipResponseWriter struct {
-	io.Writer
-	http.ResponseWriter
-}
-
-func (w gzipResponseWriter) Write(b []byte) (int, error) {
-	return w.Writer.Write(b)
-}
-
-func Gzip(handler http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
-			handler.ServeHTTP(w, r)
-		}
-		w.Header().Set("Content-Encoding", "gzip")
-		gz := gzip.NewWriter(w)
-		defer gz.Close()
-		gzw := gzipResponseWriter{Writer: gz, ResponseWriter: w}
-		handler.ServeHTTP(gzw, r)
-	})
 }

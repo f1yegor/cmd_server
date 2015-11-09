@@ -25,16 +25,16 @@ func TestExecute(t *testing.T) {
 	array, _ := parseCommand(`["sqlcmd", "-Slocalhost", "-U", "guest", "-P", "guest", "-d", "test_db", "-h", "-1", "-w", "65535", "-s^", "-Q", "SELECT [name], [server_timestamp], [id] FROM note_category", "-o", "test_sqlcmd_bcp.csv"]`)
 	w := httptest.NewRecorder()
 
-	Execute(w, relPath, array...)
+	execute(w, relPath, array...)
 }
 
 func TestEnsureDirectory(t *testing.T) {
 
-	EnsureDirectory("")
+	ensureDirectory("")
 
-	EnsureDirectory("./tenant1")
+	ensureDirectory("./tenant1")
 
-	EnsureDirectory("./tenant1/project1")
+	ensureDirectory("./tenant1/project1")
 }
 
 func TestReadConfig(t *testing.T) {
